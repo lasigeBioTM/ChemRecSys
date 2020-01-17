@@ -21,8 +21,11 @@ There are five algorithms tested:
 
 ##Files:
 1) csv with the dataset
+
 https://drive.google.com/open?id=1AbYgGw7V7KgSLudwxBAbH4yZrwHlBuFG
 (cheRM_20_200.csv)
+
+[Using Research Literature to Generate Datasets of Implicit Feedback for Recommending Scientific Items](https://ieeexplore.ieee.org/document/8924687)
 2) mySQL DB with the compounds similarities (chebi_semantic_sim_cherm_20_200_dump.sql or create at: link to github)
 
 ```
