@@ -19,7 +19,7 @@ There are five algorithms tested:
 2) mySQL
 
 
-##Files:
+## Files:
 1. csv with the dataset
 
     https://drive.google.com/open?id=1AbYgGw7V7KgSLudwxBAbH4yZrwHlBuFG
@@ -31,7 +31,7 @@ There are five algorithms tested:
 
 ```
 CREATE DATABASE chebi_semantic_sim_cherm_20_200;
-USE chebi_semantic_sim_cherm_20_200
+USE chebi_semantic_sim_cherm_20_200;
 
 SET FOREIGN_KEY_CHECKS = 0;
 
@@ -56,7 +56,7 @@ mysql -u uname -p chebi_semantic_sim_cherm_20_200 < chebi_semantic_sim_cherm_20_
 ```
 
 
-##Run:
+## Run:
 
 1) docker build -t "chemrec" .
 
