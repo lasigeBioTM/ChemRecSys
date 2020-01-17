@@ -1,7 +1,7 @@
 # ChemRecSys
 Chemical Compounds Recommender System
 
-This a module for recomending Chemical Coumpounds. 
+This a module for recommending Chemical Compounds. 
 
 There are five algorithms tested:
 * ALS (https://implicit.readthedocs.io/en/latest/quickstart.html)
@@ -21,6 +21,8 @@ There are five algorithms tested:
 
 ##Files:
 1) csv with the dataset
+https://drive.google.com/open?id=1AbYgGw7V7KgSLudwxBAbH4yZrwHlBuFG
+(cheRM_20_200.csv)
 2) mySQL DB with the compounds similarities (chebi_semantic_sim_cherm_20_200_dump.sql or create at: link to github)
 
 ```
