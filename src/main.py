@@ -13,6 +13,7 @@ from recommender_evaluation import *
 from cross_val import *
 import cffi
 from semsimcalculus import *
+import ssmpy
 
 if __name__ == '__main__':
 
@@ -234,32 +235,32 @@ if __name__ == '__main__':
                                                                         float(cv_folds * cv_folds))
 
     #save to file
-    save_final_data(metrics_all_cv_dict_onto_lin, "/mlData/cherRM_final_results_metrics_all_cv" + str(cv_folds) + "_" +  str(n) + "_dict_onto_lin_20.csv")
-    save_final_data(metrics_all_cv_dict_onto_resnik, "/mlData/cherRM_final_results_metrics_all_cv" + str(cv_folds) +  "_" +  str(n) + "_dict_onto_resnik_20.csv")
-    save_final_data(metrics_all_cv_dict_onto_jc, "/mlData/cherRM_final_results_metrics_all_cv" + str(cv_folds) +  "_" +  str(n) + "_dict_onto_jc_20.csv")
-    save_final_data(metrics_all_cv_dict_ALS, "/mlData/cherRM_final_results_metrics_all_cv" + str(cv_folds) +  "_" +  str(n) + "_dict_ALS_20.csv")
-    save_final_data(metrics_all_cv_dict_BPR, "/mlData/cherRM_final_results_metrics_all_cv" + str(cv_folds) +  "_" +  str(n) + "_dict_BPR_20.csv")
+    save_final_data(metrics_all_cv_dict_onto_lin, "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_onto_lin.csv")
+    save_final_data(metrics_all_cv_dict_onto_resnik, "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_onto_resnik.csv")
+    save_final_data(metrics_all_cv_dict_onto_jc, "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_onto_jc.csv")
+    save_final_data(metrics_all_cv_dict_ALS, "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_ALS.csv")
+    save_final_data(metrics_all_cv_dict_BPR, "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_BPR.csv")
     save_final_data(metrics_all_cv_dict_ALS_ONTO_lin_metric1,
-                    "/mlData/cherRM_final_results_metrics_all_cv" + str(cv_folds) +  "_" +  str(n) + "_dict_ALS_ONTO_lin_metric1_20.csv")
+                    "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_ALS_ONTO_lin_metric1.csv")
     save_final_data(metrics_all_cv_dict_ALS_ONTO_resnik_metric1,
-                    "/mlData/cherRM_final_results_metrics_all_cv" + str(cv_folds) +  "_" +  str(n) + "_dict_ALS_ONTO_resnik_metric1_20.csv")
+                    "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_ALS_ONTO_resnik_metric1.csv")
     save_final_data(metrics_all_cv_dict_ALS_ONTO_jc_metric1,
-                    "/mlData/cherRM_final_results_metrics_all_cv" + str(cv_folds) +  "_" +  str(n) + "_dict_ALS_ONTO_jc_metric1_20.csv")
+                    "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_ALS_ONTO_jc_metric1.csv")
     save_final_data(metrics_all_cv_dict_BPR_ONTO_lin_metric1,
-                    "/mlData/cherRM_final_results_metrics_all_cv" + str(cv_folds) +  "_" +  str(n) + "_dict_BPR_ONTO_lin_metric1_20.csv")
+                    "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_BPR_ONTO_lin_metric1.csv")
     save_final_data(metrics_all_cv_dict_BPR_ONTO_resnik_metric1,
-                    "/mlData/cherRM_final_results_metrics_all_cv" + str(cv_folds) +  "_" +  str(n) + "_dict_BPR_ONTO_resnik_metric1_20.csv")
+                    "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_BPR_ONTO_resnik_metric1.csv")
     save_final_data(metrics_all_cv_dict_BPR_ONTO_jc_metric1,
-                    "/mlData/cherRM_final_results_metrics_all_cv" + str(cv_folds) +  "_" +  str(n) + "_dict_BPR_ONTO_jc_metric1_20.csv")
+                    "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_BPR_ONTO_jc_metric1.csv")
     save_final_data(metrics_all_cv_dict_ALS_ONTO_lin_metric2,
-                    "/mlData/cherRM_final_results_metrics_all_cv" + str(cv_folds) +  "_" +  str(n) + "_dict_ALS_ONTO_lin_metric2_20.csv")
+                    "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_ALS_ONTO_lin_metric2.csv")
     save_final_data(metrics_all_cv_dict_ALS_ONTO_resnik_metric2,
-                    "/mlData/cherRM_final_results_metrics_all_cv" + str(cv_folds) +  "_" +  str(n) + "_dict_ALS_ONTO_resnik_metric2_20.csv")
+                    "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_ALS_ONTO_resnik_metric2.csv")
     save_final_data(metrics_all_cv_dict_ALS_ONTO_jc_metric2,
-                    "/mlData/cherRM_final_results_metrics_all_cv" + str(cv_folds) +  "_" +  str(n) + "_dict_ALS_ONTO_jc_metric2_20.csv")
+                    "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_ALS_ONTO_jc_metric2.csv")
     save_final_data(metrics_all_cv_dict_BPR_ONTO_lin_metric2,
-                    "/mlData/cherRM_final_results_metrics_all_cv" + str(cv_folds) +  "_" +  str(n) + "_dict_BPR_ONTO_lin_metric2_20.csv")
+                    "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_BPR_ONTO_lin_metric2.csv")
     save_final_data(metrics_all_cv_dict_BPR_ONTO_resnik_metric2,
-                    "/mlData/cherRM_final_results_metrics_all_cv" + str(cv_folds) +  "_" +  str(n) + "_dict_BPR_ONTO_resnik_metric2_20.csv")
+                    "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_dict_BPR_ONTO_resnik_metric2.csv")
     save_final_data(metrics_all_cv_dict_BPR_ONTO_jc_metric2,
-                    "/mlData/cherRM_final_results_metrics_all_cv" + str(cv_folds) +  "_" +  str(n) + "_dict_BPR_ONTO_jc_metric2_20.csv")
+                    "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_BPR_ONTO_jc_metric2.csv")

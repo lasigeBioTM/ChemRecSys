@@ -5,6 +5,8 @@ import mysql.connector
 from itertools import product
 from semsimcalculus import *
 import gc
+import numpy as np
+import pandas as pd
 #pd.set_option('display.max_rows', 1000000)
 
 def connect(host, user, password, database):
@@ -236,46 +238,46 @@ def get_evaluation(test_users, test_users_size, count_cv, count_cv_items, rating
         item_score_implicit_bpr = get_score_by_implicit(model_bayes, ratings_train_sparse_CF, test_items, t_us)
         item_score_implicit_bpr = map_system_id_to_original_id(item_score_implicit_bpr, original_item_id)
 
-        print('onto lin')
-        print(item_score_lin.sort_values(by=['score'], ascending=False).head(20))
-        print('onto resnik')
-        print(item_score_resnik.sort_values(by=['score'], ascending=False).head(20))
-        print('onto jc')
-        print(item_score_jc.sort_values(by=['score'], ascending=False).head(20))
-        print('als')
-        print(item_score_implicit_als.sort_values(by=['score'], ascending=False).head(20))
-        print('bpr')
-        print(item_score_implicit_bpr.sort_values(by=['score'], ascending=False).head(20))
+        # print('onto lin')
+        # print(item_score_lin.sort_values(by=['score'], ascending=False).head(20))
+        # print('onto resnik')
+        # print(item_score_resnik.sort_values(by=['score'], ascending=False).head(20))
+        # print('onto jc')
+        # print(item_score_jc.sort_values(by=['score'], ascending=False).head(20))
+        # print('als')
+        # print(item_score_implicit_als.sort_values(by=['score'], ascending=False).head(20))
+        # print('bpr')
+        # print(item_score_implicit_bpr.sort_values(by=['score'], ascending=False).head(20))
 
         item_score_ALS_ONTO_lin_metric1 = merge_algorithms_scores(item_score_lin, item_score_implicit_als, 1)
-        print("item_score_ALS_ONTO_lin_metric1 ", item_score_ALS_ONTO_lin_metric1)
+        # print("item_score_ALS_ONTO_lin_metric1 ", item_score_ALS_ONTO_lin_metric1)
 
         item_score_ALS_ONTO_lin_metric2 = merge_algorithms_scores(item_score_lin, item_score_implicit_als, 2)
         item_score_BPR_ONTO_lin_metric1 = merge_algorithms_scores(item_score_lin, item_score_implicit_bpr, 1)
         item_score_BPR_ONTO_lin_metric2 = merge_algorithms_scores(item_score_lin, item_score_implicit_bpr, 2)
 
-        print('ALS_ONTO_lin_metric1')
-        print(item_score_ALS_ONTO_lin_metric1.sort_values(by=['score'], ascending=False).head(20))
-        print('ALS_ONTO_lin_metric2')
-        print(item_score_ALS_ONTO_lin_metric2.sort_values(by=['score'], ascending=False).head(20))
-        print('BPR_ONTO_lin_metric1')
-        print(item_score_BPR_ONTO_lin_metric1.sort_values(by=['score'], ascending=False).head(20))
-        print('BPR_ONTO_lin_metric2')
-        print(item_score_BPR_ONTO_lin_metric2.sort_values(by=['score'], ascending=False).head(20))
+        # print('ALS_ONTO_lin_metric1')
+        # print(item_score_ALS_ONTO_lin_metric1.sort_values(by=['score'], ascending=False).head(20))
+        # print('ALS_ONTO_lin_metric2')
+        # print(item_score_ALS_ONTO_lin_metric2.sort_values(by=['score'], ascending=False).head(20))
+        # print('BPR_ONTO_lin_metric1')
+        # print(item_score_BPR_ONTO_lin_metric1.sort_values(by=['score'], ascending=False).head(20))
+        # print('BPR_ONTO_lin_metric2')
+        # print(item_score_BPR_ONTO_lin_metric2.sort_values(by=['score'], ascending=False).head(20))
 
         item_score_ALS_ONTO_resnik_metric1 = merge_algorithms_scores(item_score_resnik, item_score_implicit_als, 1)
         item_score_ALS_ONTO_resnik_metric2 = merge_algorithms_scores(item_score_resnik, item_score_implicit_als, 2)
         item_score_BPR_ONTO_resnik_metric1 = merge_algorithms_scores(item_score_resnik, item_score_implicit_bpr, 1)
         item_score_BPR_ONTO_resnik_metric2 = merge_algorithms_scores(item_score_resnik, item_score_implicit_bpr, 2)
 
-        print('ALS_ONTO_resnik_metric1')
-        print(item_score_ALS_ONTO_resnik_metric1.sort_values(by=['score'], ascending=False).head(20))
-        print('ALS_ONTO_resnik_metric2')
-        print(item_score_ALS_ONTO_resnik_metric2.sort_values(by=['score'], ascending=False).head(20))
-        print('bpr_ONTO_resnik_metric1')
-        print(item_score_BPR_ONTO_resnik_metric1.sort_values(by=['score'], ascending=False).head(20))
-        print('bpr_ONTO_resnik_metric2')
-        print(item_score_BPR_ONTO_resnik_metric2.sort_values(by=['score'], ascending=False).head(20))
+        # print('ALS_ONTO_resnik_metric1')
+        # print(item_score_ALS_ONTO_resnik_metric1.sort_values(by=['score'], ascending=False).head(20))
+        # print('ALS_ONTO_resnik_metric2')
+        # print(item_score_ALS_ONTO_resnik_metric2.sort_values(by=['score'], ascending=False).head(20))
+        # print('bpr_ONTO_resnik_metric1')
+        # print(item_score_BPR_ONTO_resnik_metric1.sort_values(by=['score'], ascending=False).head(20))
+        # print('bpr_ONTO_resnik_metric2')
+        # print(item_score_BPR_ONTO_resnik_metric2.sort_values(by=['score'], ascending=False).head(20))
 
 
         item_score_ALS_ONTO_jc_metric1 = merge_algorithms_scores(item_score_jc, item_score_implicit_als, 1)
@@ -286,20 +288,20 @@ def get_evaluation(test_users, test_users_size, count_cv, count_cv_items, rating
 
         item_score_BPR_ONTO_jc_metric2 = merge_algorithms_scores(item_score_jc, item_score_implicit_bpr, 2)
 
-        print('ALS_ONTO_jc_metric1')
-        print(item_score_ALS_ONTO_jc_metric1.sort_values(by=['score'], ascending=False).head(20))
-        print('ALS_ONTO_jc_metric2')
-        print(item_score_ALS_ONTO_jc_metric2.sort_values(by=['score'], ascending=False).head(20))
-        print('bpr_ONTO_jc_metric1')
-        print(item_score_BPR_ONTO_jc_metric1.sort_values(by=['score'], ascending=False).head(20))
-        print('bpr_ONTO_jc_metric2')
-        print(item_score_BPR_ONTO_jc_metric2.sort_values(by=['score'], ascending=False).head(20))
+        # print('ALS_ONTO_jc_metric1')
+        # print(item_score_ALS_ONTO_jc_metric1.sort_values(by=['score'], ascending=False).head(20))
+        # print('ALS_ONTO_jc_metric2')
+        # print(item_score_ALS_ONTO_jc_metric2.sort_values(by=['score'], ascending=False).head(20))
+        # print('bpr_ONTO_jc_metric1')
+        # print(item_score_BPR_ONTO_jc_metric1.sort_values(by=['score'], ascending=False).head(20))
+        # print('bpr_ONTO_jc_metric2')
+        # print(item_score_BPR_ONTO_jc_metric2.sort_values(by=['score'], ascending=False).head(20))
 
 
 
         relevant = get_relevants_by_user(ratings_test_t_us, 0)
-        print("relevant: ", relevant)
-        sys.exit()
+        # print("relevant: ", relevant)
+
 
 
         relevant_items_sum += len(relevant)  # so esta a fazer media
