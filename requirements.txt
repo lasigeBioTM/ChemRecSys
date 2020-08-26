@@ -8,3 +8,5 @@ cffi
 implicit==0.3.9
 ssmpy
 mysql-connector-python==8.0.11
+pymysql
+sqlalchemy

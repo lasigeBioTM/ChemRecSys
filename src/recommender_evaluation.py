@@ -11,7 +11,7 @@ import sys
 def get_relevants_by_user(df, threshold):
     df = df[df.rating >= threshold]
 
-    return df.item
+    return df
 
 
 def get_top_n(items_scores, n):
@@ -83,7 +83,7 @@ def fmeasure(precision, recall):
 def get_real_item_rating(rank, user_ratings):
     # map the items to the rating given by the user
 
-    rank["rating"] = rank["item"].map(user_ratings.set_index('item')["rating"]).fillna(0)
+    rank["rating"] = rank["item"].map(user_ratings.set_index('index_item')["rating"]).fillna(0)
 
     return rank
 

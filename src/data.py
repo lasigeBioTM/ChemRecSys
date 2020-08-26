@@ -22,10 +22,10 @@ def three_columns_matrix_to_csr(matrix):
     :return: (item, user) rating sparse matrix
     '''
 
-    print(len(matrix.item.unique()), len(matrix.user.unique()))
+    print(len(matrix.index_item.unique()), len(matrix.index_user.unique()))
 
-    ratings_sparse = coo_matrix((matrix.rating, (matrix.item, matrix.user)))
-    # print(ratings_sparse.toarray().shape)
+    ratings_sparse = coo_matrix((matrix.rating, (matrix.index_item, matrix.index_user)))
+    # print(ratings_train_sparse_CF.toarray().shape)
 
     return ratings_sparse
 
@@ -56,6 +56,6 @@ def id_to_index(df):
 
     df["index_item"] = df["item"].map(df_item_index.set_index('item')["new_index"]).fillna(0)
     df["index_user"] = df["user"].map(df_user_index.set_index('user')["new_index"]).fillna(0)
-    print(df)
+    #print(df)
 
     return df, df_item_index, df_user_index

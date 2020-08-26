@@ -9,7 +9,7 @@ def get_shuffle_users(dataset):
     :param dataset: pandas dataframe
     :return: array of shuffled users
     """
-    users = np.array(dataset.user.unique())
+    users = np.array(dataset.index_user.unique())
 
     np.random.shuffle(users)
     print(users.shape)
@@ -23,7 +23,7 @@ def get_shuffle_items(dataset):
     :param dataset: pandas dataframe
     :return: array of shuffled items
     """
-    items = np.array(dataset.item.unique())
+    items = np.array(dataset.index_item.unique())
 
     np.random.shuffle(items)
     print(items.shape)
@@ -84,11 +84,11 @@ def prepare_train_test(ratings, test_users, test_items):
     :param test_items: list of items IDs to be used as test
     :return: pd DataFrame test_set, pd DataFrame train_set
     """
-    test_set = ratings[(ratings.user.isin(test_users)) & (ratings.item.isin(test_items))]
+    test_set = ratings[(ratings.index_user.isin(test_users)) & (ratings.index_item.isin(test_items))]
 
     #train_set = ratings.drop(
     #    ratings[(ratings.user.isin(test_users)) & (ratings.item.isin(test_items))].index)  # train
-    train_set = ratings[~((ratings.user.isin(test_users)) & (ratings.item.isin(test_items)))]
+    train_set = ratings[~((ratings.index_user.isin(test_users)) & (ratings.index_item.isin(test_items)))]
 
     return test_set, train_set
 
@@ -108,3 +108,16 @@ def check_items_in_model(train_items, test_items):
     print(check)
 
     return test_items
+
+
+def add_dict(dict1, dict2, count_cv, count_cv_items):
+
+    if count_cv == 0 and count_cv_items == 0:
+        dict1 = dict2
+
+    else:
+
+        dict1 = {key: dict1.get(key, 0) + dict2.get(key, 0) for key in
+                          set(dict1) | set(dict2)}
+
+    return dict1
