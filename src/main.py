@@ -1,266 +1,277 @@
-import numpy as np
-import pandas as pd
-import configargparse
-import implicit
-import scipy
-import sklearn
-from scipy import sparse
-from scipy.sparse import coo_matrix
+###############################################################################
+#                                                                             #
+# Licensed under the Apache License, Version 2.0 (the "License"); you may     #
+# not use this file except in compliance with the License. You may obtain a   #
+# copy of the License at http://www.apache.org/licenses/LICENSE-2.0           #
+#                                                                             #
+# Unless required by applicable law or agreed to in writing, software         #
+# distributed under the License is distributed on an "AS IS" BASIS,           #
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.    #
+# See the License for the specific language governing permissions and         #
+# limitations under the License.                                              #
+#                                                                             #
+###############################################################################
+#                                                                             #  
+# @author: Márcia Barros                                                      #  
+# @email: marcia.c.a.barros@gmail.com                                         #
+# @date: 17 Jan 2020                                                          #
+# @version: 1.0                                                               #  
+# Lasige - FCUL                                                               #
+#                                                                             #  
+# @last update:                                                               #  
+#   version 1.1: 12 Feb 2021                                                  #      
+#   (author: Matilde Pato, matilde.pato@gmail.com)                            #  
+#                                                                             #  
+#                                                                             #  
+###############################################################################
+#
+
+from datetime import datetime
+import os
 import sys
-from data import *
-from algorithms import *
-from recommender_evaluation import *
-from cross_val import *
-import cffi
-from semsimcalculus import *
+import numpy as np
 import ssmpy
+
+from algorithms import *
+from cross_val import *
+from data import *
+from semsimcalculus import *
+from myconfiguration import MyConfiguration as cfg
+from dataset import upload_dataset
+
+np.random.seed( 42 )
 
 if __name__ == '__main__':
 
-    print(implicit.__version__)
-    print(np.__version__)
-    # print(configargparse.__version__)
-    print(pd.__version__)
-    print(scipy.__version__)
-    print(sklearn.__version__)
-    print(cffi.__version__)
+    start_time = datetime.now()
 
-    # ratings = pd.read_csv('mlData/u.data', sep='\t',
-    #                     names=['user', 'item', 'rating', 'timestamp'])
+    # ----------------------------------------------------------------------------------------------------- #
+    # check ontology database
 
-    p = configargparse.ArgParser(default_config_files=['../config/config.ini'])
-    p.add('-mc', '--my-config', is_config_file=True, help='alternative config file path')
-
-    p.add("-ds", "--path_to_dataset", required=False, help="path to dataset", type=str)
-
-    p.add("-cv", "--cv", required=False, help="cross validation folds",
-          type=int)
-
-    p.add("-k", "--topk", required=False, help="k for topk", type=int)
-    p.add("-n", "--n", required=False, help="n most similar items", type=int)
-
-    p.add("-host", "--host", required=False, help="db host", type=str)
-    p.add("-user", "--user", required=False, help="db user", type=str)
-    p.add("-pwd", "--password", required=False, help="db password", type=str)
-    p.add("-db_name", "--database", required=False, help="db name", type=str)
-    p.add("-owl", "--path_to_owl", required=False, help="path to owl ontology", type=str)
-    p.add("-db_onto", "--path_to_ontology_db", required=False, help="path to ontology db", type=str)
-
-    options = p.parse_args()
-
-    path_to_dataset = options.path_to_dataset
-
-    k = options.topk
-    n = options.n
-
-    cv_folds = options.cv
-
-    host = options.host
-    user = options.user
-    password = options.password
-    database = options.database
-    path_to_owl = options.path_to_owl
-    path_to_ontology = options.path_to_ontology_db
-
-    #################################################################################################################
-
-    df_dataset = pd.read_csv(path_to_dataset, names=['user', 'item', 'rating'], sep=',')
-
-    if os.path.isfile(path_to_ontology) == False:
-        print("chebi DB does not exit. Creating...")
-        ssmpy.create_semantic_base(path_to_owl, path_to_ontology,
-                                   "http://purl.obolibrary.org/obo/",
-                                   "http://www.w3.org/2000/01/rdf-schema#subClassOf", "")
+    if os.path.isfile( cfg.getInstance().path_to_ontology ):
+        print( "Database ontology file already exists" )
 
     else:
-        print("file already exists")
+        print( "Database from owl does not exit. Creating..." )
+        ssmpy.create_semantic_base( cfg.getInstance().path_to_owl,
+                                    cfg.getInstance().path_to_ontology,
+                                    "http://purl.obolibrary.org/obo/",
+                                    "http://www.w3.org/2000/01/rdf-schema#subClassOf", "" )
 
-    # check_database(host, user, password, database)
-
-    #################################################################################################################
-
-    ##################################################################################################################
+    # ----------------------------------------------------------------------------------------------------- #
     # connect db
-    mydb = connect( user, password, database)
+    #check_database()
 
-    ################################################################################################################
-    # get the dataset in user-item-rating format
-    ratings_original = upload_dataset(path_to_dataset)
+    # ----------------------------------------------------------------------------------------------------- #
+    # get the dataset in <user, item, rating> format
 
-    ratings2, original_item_id, original_user_id = id_to_index(ratings_original)  # are not unique
+    ratings_original = upload_dataset( cfg.getInstance().dataset,
+                                        cfg.getInstance().item_prefix )
 
+    ratings2, original_item_id, original_user_id = id_to_index( ratings_original )  # are not unique
 
     # ratings = ratings2.drop(columns=["user", "item"])
     # ratings = ratings.rename(columns={"index_item": "item", "index_user": "user"})
 
-    users_size = len(ratings2.index_user.unique())
-    items_size = len(ratings2.index_item.unique())
-    shuffle_users = get_shuffle_users(ratings2)
-    shuffle_items = get_shuffle_items(ratings2)
+    users_size = len( ratings2.index_user.unique() )
+    items_size = len( ratings2.index_item.unique() )
+    shuffle_users = get_shuffle_users( ratings2 )
+    shuffle_items = get_shuffle_items( ratings2 )
 
     count_cv = 0
 
     # dictionary for saving the results of each cross validation for each model
-    metrics_all_cv_dict_onto_lin = {}
-    metrics_all_cv_dict_onto_resnik = {}
-    metrics_all_cv_dict_onto_jc = {}
-    metrics_all_cv_dict_ALS = {}
-    metrics_all_cv_dict_BPR = {}
-    metrics_all_cv_dict_ALS_ONTO_lin_metric1 = {}
-    metrics_all_cv_dict_ALS_ONTO_resnik_metric1 = {}
-    metrics_all_cv_dict_ALS_ONTO_jc_metric1 = {}
-    metrics_all_cv_dict_BPR_ONTO_lin_metric1 = {}
-    metrics_all_cv_dict_BPR_ONTO_resnik_metric1 = {}
-    metrics_all_cv_dict_BPR_ONTO_jc_metric1 = {}
-    metrics_all_cv_dict_ALS_ONTO_lin_metric2 = {}
-    metrics_all_cv_dict_ALS_ONTO_resnik_metric2 = {}
-    metrics_all_cv_dict_ALS_ONTO_jc_metric2 = {}
-    metrics_all_cv_dict_BPR_ONTO_lin_metric2 = {}
-    metrics_all_cv_dict_BPR_ONTO_resnik_metric2 = {}
-    metrics_all_cv_dict_BPR_ONTO_jc_metric2 = {}
+    
+    all_als = {}
+    all_bpr = {}
 
-    for test_users in np.array_split(shuffle_users, cv_folds):
+    if cfg.getInstance().sim_metric in ('sim_lin', 'all'):
+        all_onto_lin = {}
 
-        test_users_size = len(test_users)
-        print("number of test users: ", test_users_size)
-        sys.stdout.flush()
+        all_als_onto_lin_m1 = {}
+        all_als_onto_lin_m2 = {}
 
-        count_cv_items = 0
-        for test_items in np.array_split(shuffle_items, cv_folds):
+        all_bpr_onto_lin_m1 = {}
+        all_bpr_onto_lin_m2 = {}
+    if cfg.getInstance().sim_metric in ('sim_resnik', 'all'):
+        all_onto_resnik = {}
+
+        all_als_onto_resnik_m1 = {}
+        all_als_onto_resnik_m2 = {}
+
+        all_bpr_onto_resnik_m1 = {}
+        all_bpr_onto_resnik_m2 = {}
+
+    if cfg.getInstance().sim_metric in ('sim_jc', 'all'):
+        all_onto_jc = {}
+
+        all_als_onto_jc_m1 = {}
+        all_als_onto_jc_m2 = {}
+
+        all_bpr_onto_jc_m1 = {}
+        all_bpr_onto_jc_m2 = {}
+
+    cv_folds = cfg.getInstance().cv
+    n = cfg.getInstance().n
+    k = cfg.getInstance().topk
+
+    # for test_users in np.array_split( shuffle_users, cv_folds ):
+
+    test_users_size = len( test_users )
+    print( "number of test users: ", test_users_size )
+    sys.stdout.flush()
+
+    count_cv_items = 0
+    for test_items in np.array_split( shuffle_items, cv_folds ):
             # models to be used
 
-            test_items_size = len(test_items)
-            print("number of test items: ", test_items_size)
-            sys.stdout.flush()
+        test_items_size = len( test_items )
+        print( "number of test items: ", test_items_size )
+        sys.stdout.flush()
 
-            ### prepare the data for implicit models
-            ratings_test, ratings_train = prepare_train_test(ratings2, test_users, test_items)
+        ### prepare the data for implicit models
+        ratings_test, ratings_train = prepare_train_test( ratings2, test_users, test_items )
 
-            # ratings_test, ratings_train = prepare_train_test_(ratings, test_users, test_items) # removes all the ratings from the training set for the test_items # does not work
+        test_items = check_items_in_model( ratings_train.index_item.unique(), test_items )
+        ratings_sparse = three_columns_matrix_to_csr( ratings_train )  # item, user, rating
 
-            test_items = check_items_in_model(ratings_train.index_item.unique(), test_items)
-            ratings_sparse = three_columns_matrix_to_csr(ratings_train)  # item, user, rating
+        onto_lin, onto_resnik, onto_jc, als, \
+        bpr, als_onto_lin_m1, als_onto_resnik_m1, \
+        als_onto_jc_m1, bpr_onto_lin_m1, bpr_onto_resnik_m1, \
+        bpr_onto_jc_m1, als_onto_lin_m2, als_onto_resnik_m2, \
+        als_onto_jc_m2, bpr_onto_lin_m2, bpr_onto_resnik_m2, \
+        bpr_onto_jc_m2 = get_evaluation(
+            test_users, test_users_size, count_cv, count_cv_items, ratings_test,
+            ratings_sparse, test_items, ratings2, original_item_id,
+            cfg.getInstance().sim_metric )
 
-            metrics_cv_dict_onto_lin, metrics_cv_dict_onto_resnik, metrics_cv_dict_onto_jc, metrics_cv_dict_ALS, \
-            metrics_cv_dict_BPR, metrics_cv_dict_ALS_ONTO_lin_metric1, metrics_cv_dict_ALS_ONTO_resnik_metric1, \
-            metrics_cv_dict_ALS_ONTO_jc_metric1, metrics_cv_dict_BPR_ONTO_lin_metric1, metrics_cv_dict_BPR_ONTO_resnik_metric1, \
-            metrics_cv_dict_BPR_ONTO_jc_metric1, metrics_cv_dict_ALS_ONTO_lin_metric2, metrics_cv_dict_ALS_ONTO_resnik_metric2, \
-            metrics_cv_dict_ALS_ONTO_jc_metric2, metrics_cv_dict_BPR_ONTO_lin_metric2, metrics_cv_dict_BPR_ONTO_resnik_metric2, \
-            metrics_cv_dict_BPR_ONTO_jc_metric2 = get_evaluation(
-                test_users, test_users_size, count_cv, count_cv_items, ratings_test,
-                ratings_sparse, test_items, k, ratings2, original_item_id, mydb, n)
+        # add to dictionary
+        all_als = add_dict( all_als, als, count_cv, count_cv_items )
+        all_bpr = add_dict( all_bpr, bpr, count_cv, count_cv_items )
 
-            # add to dictionary
-            metrics_all_cv_dict_onto_lin = add_dict(metrics_all_cv_dict_onto_lin, metrics_cv_dict_onto_lin, count_cv,
-                                                    count_cv_items)
-            metrics_all_cv_dict_onto_resnik = add_dict(metrics_all_cv_dict_onto_resnik, metrics_cv_dict_onto_resnik,
-                                                       count_cv,
-                                                       count_cv_items)
-            metrics_all_cv_dict_onto_jc = add_dict(metrics_all_cv_dict_onto_jc, metrics_cv_dict_onto_jc, count_cv,
-                                                   count_cv_items)
-            metrics_all_cv_dict_ALS = add_dict(metrics_all_cv_dict_ALS, metrics_cv_dict_ALS, count_cv, count_cv_items)
-            metrics_all_cv_dict_BPR = add_dict(metrics_all_cv_dict_BPR, metrics_cv_dict_BPR, count_cv, count_cv_items)
-            metrics_all_cv_dict_ALS_ONTO_lin_metric1 = add_dict(metrics_all_cv_dict_ALS_ONTO_lin_metric1,
-                                                                metrics_cv_dict_ALS_ONTO_lin_metric1, count_cv,
-                                                                count_cv_items)
-            metrics_all_cv_dict_ALS_ONTO_resnik_metric1 = add_dict(metrics_all_cv_dict_ALS_ONTO_resnik_metric1,
-                                                                   metrics_cv_dict_ALS_ONTO_resnik_metric1, count_cv,
-                                                                   count_cv_items)
-            metrics_all_cv_dict_ALS_ONTO_jc_metric1 = add_dict(metrics_all_cv_dict_ALS_ONTO_jc_metric1,
-                                                               metrics_cv_dict_ALS_ONTO_jc_metric1, count_cv,
-                                                               count_cv_items)
-            metrics_all_cv_dict_BPR_ONTO_lin_metric1 = add_dict(metrics_all_cv_dict_BPR_ONTO_lin_metric1,
-                                                                metrics_cv_dict_BPR_ONTO_lin_metric1, count_cv,
-                                                                count_cv_items)
-            metrics_all_cv_dict_BPR_ONTO_resnik_metric1 = add_dict(metrics_all_cv_dict_BPR_ONTO_resnik_metric1,
-                                                                   metrics_cv_dict_BPR_ONTO_resnik_metric1, count_cv,
-                                                                   count_cv_items)
-            metrics_all_cv_dict_BPR_ONTO_jc_metric1 = add_dict(metrics_all_cv_dict_BPR_ONTO_jc_metric1,
-                                                               metrics_cv_dict_BPR_ONTO_jc_metric1, count_cv,
-                                                               count_cv_items)
-            metrics_all_cv_dict_ALS_ONTO_lin_metric2 = add_dict(metrics_all_cv_dict_ALS_ONTO_lin_metric2,
-                                                                metrics_cv_dict_ALS_ONTO_lin_metric2, count_cv,
-                                                                count_cv_items)
-            metrics_all_cv_dict_ALS_ONTO_resnik_metric2 = add_dict(metrics_all_cv_dict_ALS_ONTO_resnik_metric2,
-                                                                   metrics_cv_dict_ALS_ONTO_resnik_metric2, count_cv,
-                                                                   count_cv_items)
-            metrics_all_cv_dict_ALS_ONTO_jc_metric2 = add_dict(metrics_all_cv_dict_ALS_ONTO_jc_metric2,
-                                                               metrics_cv_dict_ALS_ONTO_jc_metric2, count_cv,
-                                                               count_cv_items)
-            metrics_all_cv_dict_BPR_ONTO_lin_metric2 = add_dict(metrics_all_cv_dict_BPR_ONTO_lin_metric2,
-                                                                metrics_cv_dict_BPR_ONTO_lin_metric2, count_cv,
-                                                                count_cv_items)
-            metrics_all_cv_dict_BPR_ONTO_resnik_metric2 = add_dict(metrics_all_cv_dict_BPR_ONTO_resnik_metric2,
-                                                                   metrics_cv_dict_BPR_ONTO_resnik_metric2, count_cv,
-                                                                   count_cv_items)
-            metrics_all_cv_dict_BPR_ONTO_jc_metric2 = add_dict(metrics_all_cv_dict_BPR_ONTO_jc_metric2,
-                                                               metrics_cv_dict_BPR_ONTO_jc_metric2, count_cv,
-                                                               count_cv_items)
+        if cfg.getInstance().sim_metric in ('sim_lin', 'all'):
+            all_onto_lin = add_dict( all_onto_lin, onto_lin, count_cv, count_cv_items )
 
-            sys.stdout.flush()
-            count_cv_items += 1
+            all_als_onto_lin_m1 = add_dict( all_als_onto_lin_m1, als_onto_lin_m1, count_cv,
+                                            count_cv_items )
+            all_bpr_onto_lin_m1 = add_dict( all_bpr_onto_lin_m1,
+                                            bpr_onto_lin_m1, count_cv,
+                                            count_cv_items )
+            all_als_onto_lin_m2 = add_dict( all_als_onto_lin_m2, als_onto_lin_m2, count_cv,
+                                            count_cv_items )
+
+        if cfg.getInstance().sim_metric in ('sim_resnik', 'all'):
+            all_onto_resnik = add_dict( all_onto_resnik, onto_resnik,
+                                        count_cv,
+                                        count_cv_items )
+            all_als_onto_resnik_m1 = add_dict( all_als_onto_resnik_m1,
+                                                als_onto_resnik_m1, count_cv,
+                                                count_cv_items )
+            all_bpr_onto_resnik_m1 = add_dict( all_bpr_onto_resnik_m1,
+                                                bpr_onto_resnik_m1, count_cv,
+                                                count_cv_items )
+            all_als_onto_resnik_m2 = add_dict( all_als_onto_resnik_m2,
+                                                als_onto_resnik_m2, count_cv,
+                                                count_cv_items )
+            all_bpr_onto_resnik_m2 = add_dict( all_bpr_onto_resnik_m2,
+                                                bpr_onto_resnik_m2, count_cv,
+                                                count_cv_items )
+
+        if cfg.getInstance().sim_metric in ('sim_jc', 'all'):
+            all_onto_jc = add_dict( all_onto_jc, onto_jc, count_cv,
+                                    count_cv_items )
+            all_als_onto_jc_m1 = add_dict( all_als_onto_jc_m1,
+                                            als_onto_jc_m1, count_cv,
+                                            count_cv_items )
+            all_bpr_onto_jc_m1 = add_dict( all_bpr_onto_jc_m1,
+                                            bpr_onto_jc_m1, count_cv,
+                                            count_cv_items )
+            all_als_onto_jc_m2 = add_dict( all_als_onto_jc_m2, als_onto_jc_m2, count_cv,
+                                            count_cv_items )
+            all_bpr_onto_lin_m2 = add_dict( all_bpr_onto_lin_m2,
+                                            bpr_onto_lin_m2, count_cv,
+                                            count_cv_items )
+            all_bpr_onto_jc_m2 = add_dict( all_bpr_onto_jc_m2, bpr_onto_jc_m2, count_cv,
+                                            count_cv_items )
+
+        sys.stdout.flush()
+        count_cv_items += 1
+        # TO REMOVE
+        # if count_cv_items > 2:
+        #    break
 
         count_cv += 1
+        # TO REMOVE
+        # if count_cv > 2:
+        #        break
+# ----------------------------------------------------------------------------------------------------- #
+    # calculates mean and save to a csv file all metrics: [P, R, F, fpr, rr, nDCG, lauc] (preferencial order)
+    path = '/mlData/results_nfolds'
+    STR_N = '_nsimilar_'
 
-    # calculates mean
-    metrics_all_cv_dict_onto_lin = calculate_dictionary_mean(metrics_all_cv_dict_onto_lin, float(cv_folds * cv_folds))
-    metrics_all_cv_dict_onto_resnik = calculate_dictionary_mean(metrics_all_cv_dict_onto_resnik,
-                                                                float(cv_folds * cv_folds))
-    metrics_all_cv_dict_onto_jc = calculate_dictionary_mean(metrics_all_cv_dict_onto_jc, float(cv_folds * cv_folds))
-    metrics_all_cv_dict_ALS = calculate_dictionary_mean(metrics_all_cv_dict_ALS, float(cv_folds * cv_folds))
-    metrics_all_cv_dict_BPR = calculate_dictionary_mean(metrics_all_cv_dict_BPR, float(cv_folds * cv_folds))
-    metrics_all_cv_dict_ALS_ONTO_lin_metric1 = calculate_dictionary_mean(metrics_all_cv_dict_ALS_ONTO_lin_metric1,
-                                                                         float(cv_folds * cv_folds))
-    metrics_all_cv_dict_ALS_ONTO_resnik_metric1 = calculate_dictionary_mean(metrics_all_cv_dict_ALS_ONTO_resnik_metric1,
-                                                                            float(cv_folds * cv_folds))
-    metrics_all_cv_dict_ALS_ONTO_jc_metric1 = calculate_dictionary_mean(metrics_all_cv_dict_ALS_ONTO_jc_metric1,
-                                                                        float(cv_folds * cv_folds))
-    metrics_all_cv_dict_BPR_ONTO_lin_metric1 = calculate_dictionary_mean(metrics_all_cv_dict_BPR_ONTO_lin_metric1,
-                                                                         float(cv_folds * cv_folds))
-    metrics_all_cv_dict_BPR_ONTO_resnik_metric1 = calculate_dictionary_mean(metrics_all_cv_dict_BPR_ONTO_resnik_metric1,
-                                                                            float(cv_folds * cv_folds))
-    metrics_all_cv_dict_BPR_ONTO_jc_metric1 = calculate_dictionary_mean(metrics_all_cv_dict_BPR_ONTO_jc_metric1,
-                                                                        float(cv_folds * cv_folds))
-    metrics_all_cv_dict_ALS_ONTO_lin_metric2 = calculate_dictionary_mean(metrics_all_cv_dict_ALS_ONTO_lin_metric2,
-                                                                         float(cv_folds * cv_folds))
-    metrics_all_cv_dict_ALS_ONTO_resnik_metric2 = calculate_dictionary_mean(metrics_all_cv_dict_ALS_ONTO_resnik_metric2,
-                                                                            float(cv_folds * cv_folds))
-    metrics_all_cv_dict_ALS_ONTO_jc_metric2 = calculate_dictionary_mean(metrics_all_cv_dict_ALS_ONTO_jc_metric2,
-                                                                        float(cv_folds * cv_folds))
-    metrics_all_cv_dict_BPR_ONTO_lin_metric2 = calculate_dictionary_mean(metrics_all_cv_dict_BPR_ONTO_lin_metric2,
-                                                                         float(cv_folds * cv_folds))
-    metrics_all_cv_dict_BPR_ONTO_resnik_metric2 = calculate_dictionary_mean(metrics_all_cv_dict_BPR_ONTO_resnik_metric2,
-                                                                            float(cv_folds * cv_folds))
-    metrics_all_cv_dict_BPR_ONTO_jc_metric2 = calculate_dictionary_mean(metrics_all_cv_dict_BPR_ONTO_jc_metric2,
-                                                                        float(cv_folds * cv_folds))
+    all_als = calculate_dictionary_mean( all_als, float( cv_folds * cv_folds ) )
+    all_bpr = calculate_dictionary_mean( all_bpr, float( cv_folds * cv_folds ) )
+    save_final_data( all_als, path + str( cv_folds ) + STR_N + str( n ) + "_ALS.csv" )
+    save_final_data( all_bpr, path + str( cv_folds ) + STR_N + str( n ) + "_BPR.csv" )
 
-    #save to file
-    save_final_data(metrics_all_cv_dict_onto_lin, "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_onto_lin.csv")
-    save_final_data(metrics_all_cv_dict_onto_resnik, "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_onto_resnik.csv")
-    save_final_data(metrics_all_cv_dict_onto_jc, "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_onto_jc.csv")
-    save_final_data(metrics_all_cv_dict_ALS, "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_ALS.csv")
-    save_final_data(metrics_all_cv_dict_BPR, "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_BPR.csv")
-    save_final_data(metrics_all_cv_dict_ALS_ONTO_lin_metric1,
-                    "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_ALS_ONTO_lin_metric1.csv")
-    save_final_data(metrics_all_cv_dict_ALS_ONTO_resnik_metric1,
-                    "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_ALS_ONTO_resnik_metric1.csv")
-    save_final_data(metrics_all_cv_dict_ALS_ONTO_jc_metric1,
-                    "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_ALS_ONTO_jc_metric1.csv")
-    save_final_data(metrics_all_cv_dict_BPR_ONTO_lin_metric1,
-                    "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_BPR_ONTO_lin_metric1.csv")
-    save_final_data(metrics_all_cv_dict_BPR_ONTO_resnik_metric1,
-                    "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_BPR_ONTO_resnik_metric1.csv")
-    save_final_data(metrics_all_cv_dict_BPR_ONTO_jc_metric1,
-                    "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_BPR_ONTO_jc_metric1.csv")
-    save_final_data(metrics_all_cv_dict_ALS_ONTO_lin_metric2,
-                    "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_ALS_ONTO_lin_metric2.csv")
-    save_final_data(metrics_all_cv_dict_ALS_ONTO_resnik_metric2,
-                    "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_ALS_ONTO_resnik_metric2.csv")
-    save_final_data(metrics_all_cv_dict_ALS_ONTO_jc_metric2,
-                    "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_ALS_ONTO_jc_metric2.csv")
-    save_final_data(metrics_all_cv_dict_BPR_ONTO_lin_metric2,
-                    "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_BPR_ONTO_lin_metric2.csv")
-    save_final_data(metrics_all_cv_dict_BPR_ONTO_resnik_metric2,
-                    "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_dict_BPR_ONTO_resnik_metric2.csv")
-    save_final_data(metrics_all_cv_dict_BPR_ONTO_jc_metric2,
-                    "/mlData/results_nfolds" + str(cv_folds) + "_nsimilar_" +  str(n) + "_BPR_ONTO_jc_metric2.csv")
+    if cfg.getInstance().sim_metric in ('sim_lin', 'all'):
+        all_onto_lin = calculate_dictionary_mean( all_onto_lin, float( cv_folds * cv_folds ) )
+        all_als_onto_lin_m1 = calculate_dictionary_mean( all_als_onto_lin_m1, float( cv_folds * cv_folds ) )
+        all_bpr_onto_lin_m1 = calculate_dictionary_mean( all_bpr_onto_lin_m1, float( cv_folds * cv_folds ) )
+        all_als_onto_lin_m2 = calculate_dictionary_mean( all_als_onto_lin_m2, float( cv_folds * cv_folds ) )
+        all_bpr_onto_lin_m2 = calculate_dictionary_mean( all_bpr_onto_lin_m2, float( cv_folds * cv_folds ) )
+    
+        path = create_directory('/mlData/sim_lin/') + 'results_nfolds'
+
+        save_final_data( all_onto_lin, path + str( cv_folds ) + STR_N + str( n ) + "_onto_lin.csv" )
+        save_final_data( all_als_onto_lin_m1, path + str( cv_folds ) + STR_N + str( n ) + "_als_onto_lin_m1.csv" )
+        save_final_data( all_bpr_onto_lin_m1, path + str( cv_folds ) + STR_N + str( n ) + "_bpr_onto_lin_m1.csv" )
+        save_final_data( all_als_onto_lin_m2, path + str( cv_folds ) + STR_N + str( n ) + "_als_onto_lin_m2.csv" )
+        save_final_data( all_bpr_onto_lin_m2, path + str( cv_folds ) + STR_N + str( n ) + "_bpr_onto_lin_m2.csv" )
+
+    if cfg.getInstance().sim_metric in ('sim_resnik', 'all'):
+        all_onto_resnik = calculate_dictionary_mean( all_onto_resnik, float( cv_folds * cv_folds ) )
+        all_als_onto_resnik_m1 = calculate_dictionary_mean( all_als_onto_resnik_m1, float( cv_folds * cv_folds ) )
+        all_bpr_onto_resnik_m1 = calculate_dictionary_mean( all_bpr_onto_resnik_m1, float( cv_folds * cv_folds ) )
+        all_als_onto_resnik_m2 = calculate_dictionary_mean( all_als_onto_resnik_m2, float( cv_folds * cv_folds ) )
+        all_bpr_onto_resnik_m2 = calculate_dictionary_mean( all_bpr_onto_resnik_m2, float( cv_folds * cv_folds ) )
+        
+        path = create_directory('/mlData/sim_resnik/') + 'results_nfolds'
+        
+        save_final_data( all_onto_resnik, path + str( cv_folds ) + STR_N + str( n ) + "_onto_resnik.csv" )
+        save_final_data( all_als_onto_resnik_m1, path + str( cv_folds ) + STR_N + str( n ) + "_als_onto_resnik_m1.csv" )
+        save_final_data( all_bpr_onto_resnik_m1, path + str( cv_folds ) + STR_N + str( n ) + "_bpr_onto_resnik_m1.csv" )
+        save_final_data( all_als_onto_resnik_m2, path + str( cv_folds ) + STR_N + str( n ) + "_als_onto_resnik_m2.csv" )
+        save_final_data( all_bpr_onto_resnik_m2, path + str( cv_folds ) + STR_N + str( n ) + "_bpr_onto_resnik_m2.csv" )
+
+    if cfg.getInstance().sim_metric in ('sim_jc', 'all'):
+        all_onto_jc = calculate_dictionary_mean( all_onto_jc, float( cv_folds * cv_folds ) )
+        all_als_onto_jc_m1 = calculate_dictionary_mean( all_als_onto_jc_m1, float( cv_folds * cv_folds ) )
+        all_bpr_onto_jc_m1 = calculate_dictionary_mean( all_bpr_onto_jc_m1, float( cv_folds * cv_folds ) )
+        all_als_onto_jc_m2 = calculate_dictionary_mean( all_als_onto_jc_m2, float( cv_folds * cv_folds ) )
+        all_bpr_onto_jc_m2 = calculate_dictionary_mean( all_bpr_onto_jc_m2, float( cv_folds * cv_folds ) )
+        
+        path = create_directory('/mlData/sim_jc/') + 'results_nfolds'
+
+        save_final_data( all_onto_jc, path + str( cv_folds ) + STR_N + str( n ) + "_onto_jc.csv" )
+        save_final_data( all_als_onto_jc_m1, path + str( cv_folds ) + STR_N + str( n ) + "_als_onto_jc_m1.csv" )
+        save_final_data( all_bpr_onto_jc_m1, path + str( cv_folds ) + STR_N + str( n ) + "_bpr_onto_jc_m1.csv" )
+        save_final_data( all_als_onto_jc_m2, path + str( cv_folds ) + STR_N + str( n ) + "_als_onto_jc_m2.csv" )
+        save_final_data( all_bpr_onto_jc_m2, path + str( cv_folds ) + STR_N + str( n ) + "_bpr_onto_jc_m2.csv" )
+
+    # ----------------------------------------------------------------------------------------------------- #
+    # save time process
+    end_time = datetime.now()
+    with open( '../info_process.txt', 'a' ) as f:
+        f.write( "Date: {date} \nDuration: {duration}\n".
+            format(
+            date=datetime.now(),
+            duration=end_time - start_time )
+        )
+        f.write( "Database: {db} \nDataset: {ds} \nOntology: {onto}\n\n".
+            format(
+            db=cfg.getInstance().database,
+            ds=cfg.getInstance().dataset,
+            onto=cfg.getInstance().item_prefix )
+        )
+        f.close()

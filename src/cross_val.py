@@ -1,6 +1,31 @@
-import pandas as pd
+###############################################################################
+#                                                                             #
+# Licensed under the Apache License, Version 2.0 (the "License"); you may     #
+# not use this file except in compliance with the License. You may obtain a   #
+# copy of the License at http://www.apache.org/licenses/LICENSE-2.0           #
+#                                                                             #
+# Unless required by applicable law or agreed to in writing, software         #
+# distributed under the License is distributed on an "AS IS" BASIS,           #
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.    #
+# See the License for the specific language governing permissions and         #
+# limitations under the License.                                              #
+#                                                                             #
+###############################################################################
+#                                                                             #  
+# @author: Márcia Barros                                                      #  
+# @email: marcia.c.a.barros@gmail.com                                         #
+# @date: 17 Jan 2020                                                          #
+# @version: 1.0                                                               #  
+# Lasige - FCUL                                                               #
+#                                                                             #  
+# @last update:                                                               #  
+#   version 1.1: 12 Feb 2021                                                  #      
+#   (author: Matilde Pato, matilde.pato@gmail.com)                            #  
+#                                                                             #  
+#                                                                             #  
+###############################################################################
+#
 import numpy as np
-import sys
 
 
 def get_shuffle_users(dataset):
@@ -10,12 +35,11 @@ def get_shuffle_users(dataset):
     :return: array of shuffled users
     """
     users = np.array(dataset.index_user.unique())
-
     np.random.shuffle(users)
-    print(users.shape)
-
+    # print("Users shape: ", users.shape)
     return users
 
+# ----------------------------------------------------------------------------------------------------- #
 
 def get_shuffle_items(dataset):
     """
@@ -26,54 +50,29 @@ def get_shuffle_items(dataset):
     items = np.array(dataset.index_item.unique())
 
     np.random.shuffle(items)
-    print(items.shape)
-
+    # print("Items shape: ",  items.shape)
     return items
 
+# ----------------------------------------------------------------------------------------------------- #
 
 def divide_users_train_test(users, min_val, max_val):
-    test_users = np.array(users)[min_val:max_val]
+    return np.array(users)[min_val:max_val]
 
-    return test_users
-
+# ----------------------------------------------------------------------------------------------------- #
 
 def divide_items_train_test(items, min_val, max_val):
-    test_items = np.array(items)[min_val:max_val]
+    return np.array(items)[min_val:max_val]
 
-    return test_items
-
-    # unique_items = dataset.item.unique()
-
-    # unique_users = np.random.shuffle(np.array(unique_users))
-
-    # unique_items = np.random.shuffle(np.array(unique_items))
-
+# ----------------------------------------------------------------------------------------------------- #
 
 def calculate_dictionary_mean(dict, division):
+   
     for i in dict:
         dict[i] = dict[i] / division
 
     return dict
 
-
-
-def prepare_train_test_(ratings, test_users, test_items):
-    """
-    Serarates the test and the train from the whole dataset
-
-    :param ratings: pandas dataframe of user, item, rating
-    :param test_users: list of users IDs to be used as test
-    :param test_items: list of items IDs to be used as test
-    :return: pd DataFrame test_set, pd DataFrame train_set
-    """
-    test_set = ratings[(ratings.user.isin(test_users)) & (ratings.item.isin(test_items))]
-
-    #train_set = ratings.drop(
-    #    ratings[(ratings.user.isin(test_users)) & (ratings.item.isin(test_items))].index)  # train
-    train_set = ratings[~(ratings.item.isin(test_items))]
-
-    return test_set, train_set
-
+# ----------------------------------------------------------------------------------------------------- #
 
 def prepare_train_test(ratings, test_users, test_items):
     """
@@ -84,14 +83,15 @@ def prepare_train_test(ratings, test_users, test_items):
     :param test_items: list of items IDs to be used as test
     :return: pd DataFrame test_set, pd DataFrame train_set
     """
-    test_set = ratings[(ratings.index_user.isin(test_users)) & (ratings.index_item.isin(test_items))]
 
+    test_set = ratings[(ratings.index_user.isin(test_users)) & (ratings.index_item.isin(test_items))]
     #train_set = ratings.drop(
     #    ratings[(ratings.user.isin(test_users)) & (ratings.item.isin(test_items))].index)  # train
     train_set = ratings[~((ratings.index_user.isin(test_users)) & (ratings.index_item.isin(test_items)))]
 
     return test_set, train_set
 
+# ----------------------------------------------------------------------------------------------------- #
 
 def check_items_in_model(train_items, test_items):
     check = True
@@ -101,23 +101,19 @@ def check_items_in_model(train_items, test_items):
         check = False
         mask2 = np.isin(test_items, train_items)
 
-        print(test_items[~mask2])
+        print("Items in model: ",  test_items[~mask2])
 
         test_items = test_items[mask2]
-
-    print(check)
-
+    #print(check)
     return test_items
 
+# ----------------------------------------------------------------------------------------------------- #
 
 def add_dict(dict1, dict2, count_cv, count_cv_items):
 
     if count_cv == 0 and count_cv_items == 0:
-        dict1 = dict2
-
+        dict1 =  dict2
     else:
-
         dict1 = {key: dict1.get(key, 0) + dict2.get(key, 0) for key in
                           set(dict1) | set(dict2)}
-
-    return dict1
+    return dict1                      
